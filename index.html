@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input Data Mahasiswa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="form-container">
+        <!-- Navigasi Halaman -->
+        <div class="nav-tabs">
+            <a href="index.html" class="tab-btn active">Input Data</a>
+            <a href="data.html" class="tab-btn">Panel Admin 🔒</a>
+        </div>
+
+        <div class="form-header">
+            <h2>Portal Pendataan Mahasiswa</h2>
+            <p class="subtitle">Lengkapi formulir di bawah ini untuk menyimpan data</p>
+        </div>
+
+        <div id="toastNotification" class="toast hidden"></div>
+
+        <form id="mahasiswaForm">
+            <div class="form-group">
+                <label for="nim">Nomor Induk Mahasiswa (NIM)</label>
+                <input type="text" id="nim" name="nim" placeholder="Masukkan NIM..." required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Kata Sandi</label>
+                <div class="password-container">
+                    <input type="password" id="password" name="password" placeholder="Minimal 6 karakter..." required>
+                    <button type="button" id="togglePassword">Lihat</button>
+                </div>
+                <div class="password-strength">
+                    <div id="strengthBar"></div>
+                </div>
+                <span id="strengthText" class="strength-label">Kekuatan sandi</span>
+            </div>
+
+            <div class="form-group">
+                <label for="prodi">Program Studi</label>
+                <select id="prodi" name="prodi" required>
+                    <option value="">-- Pilih Program Studi --</option>
+                    <option value="Sistem Informasi">Sistem Informasi</option>
+                    <option value="Teknologi Informasi">Teknologi Informasi</option>
+                    <option value="Teknologi Informasi">Sistem Komputer</option>
+                    <option value="Teknologi Informasi">Bisnis Digital</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Jenis Kelamin</label>
+                <div class="gender-options">
+                    <label class="radio-label">
+                        <input type="radio" name="gender" value="Laki-laki" required> Laki-laki
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="gender" value="Perempuan"> Perempuan
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="submit-btn">
+                <span>Simpan Data Mahasiswa</span>
+            </button>
+        </form>
+
+        <div class="form-footer">
+            <p>&copy; 2026 Sistem Pendataan Mahasiswa</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Logika Toggle Password Form Input
+            const passwordInput = document.getElementById("password");
+            const togglePassword = document.getElementById("togglePassword");
+
+            if (passwordInput && togglePassword) {
+                togglePassword.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    if (passwordInput.type === "password") {
+                        passwordInput.type = "text";
+                        togglePassword.textContent = "Sembunyikan";
+                    } else {
+                        passwordInput.type = "password";
+                        togglePassword.textContent = "Lihat";
+                    }
+                });
+            }
+
+            const strengthBar = document.getElementById("strengthBar");
+            const strengthText = document.getElementById("strengthText");
+
+            if (passwordInput && strengthBar && strengthText) {
+                passwordInput.addEventListener("input", function () {
+                    const val = passwordInput.value;
+                    let strength = 0;
+                    if (val.length >= 6) strength += 1;
+                    if (val.match(/[A-Z]/)) strength += 1;
+                    if (val.match(/[0-9]/)) strength += 1;
+
+                    if (val.length === 0) {
+                        strengthBar.style.width = "0%";
+                        strengthText.textContent = "Kekuatan sandi";
+                    } else if (strength === 1) {
+                        strengthBar.style.width = "33%";
+                        strengthBar.style.backgroundColor = "#ef4444";
+                        strengthText.textContent = "Sandi Lemah";
+                    } else if (strength === 2) {
+                        strengthBar.style.width = "66%";
+                        strengthBar.style.backgroundColor = "#f59e0b";
+                        strengthText.textContent = "Sandi Sedang";
+                    } else if (strength >= 3) {
+                        strengthBar.style.width = "100%";
+                        strengthBar.style.backgroundColor = "#10b981";
+                        strengthText.textContent = "Sandi Kuat";
+                    }
+                });
+            }
+
+            const form = document.getElementById("mahasiswaForm");
+            const toast = document.getElementById("toastNotification");
+
+            if (form) {
+                function showToast(message, type) {
+                    if (!toast) return;
+                    toast.textContent = message;
+                    toast.className = `toast ${type}`;
+                    setTimeout(() => { toast.className = "toast hidden"; }, 3500);
+                }
+
+                form.addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    const nim = document.getElementById("nim").value.trim();
+                    const password = passwordInput.value;
+                    const prodi = document.getElementById("prodi").value;
+                    const genderRadio = form.querySelector('input[name="gender"]:checked');
+
+                    if (!genderRadio) {
+                        showToast("Pilih jenis kelamin terlebih dahulu!", "error");
+                        return;
+                    }
+
+                    let currentData = JSON.parse(localStorage.getItem("mahasiswaData")) || [];
+
+                    const isExist = currentData.some(mhs => mhs.nim === nim);
+                    if (isExist) {
+                        showToast("NIM sudah terdaftar! Gunakan NIM lain.", "error");
+                        return;
+                    }
+
+                    const newMahasiswa = {
+                        id: Date.now(),
+                        nim: nim,
+                        password: password,
+                        prodi: prodi,
+                        gender: genderRadio.value,
+                        timestamp: new Date().toLocaleString('id-ID')
+                    };
+
+                    currentData.push(newMahasiswa);
+                    localStorage.setItem("mahasiswaData", JSON.stringify(currentData));
+
+                    showToast("Data Mahasiswa Berhasil Disimpan!", "success");
+                    form.reset();
+                    if (strengthBar) strengthBar.style.width = "0%";
+                    if (strengthText) strengthText.textContent = "Kekuatan sandi";
+                });
+            }
+        });
+    </script>
+</body>
+</html>

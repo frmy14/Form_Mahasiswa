@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - Data Mahasiswa</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="table-container">
+        <!-- Navigasi Halaman -->
+        <div class="nav-tabs">
+            <a href="index.html" class="tab-btn">Input Data</a>
+            <a href="data.html" class="tab-btn active">Panel Admin 🔒</a>
+        </div>
+
+        <!-- TAMPILAN FORM LOGIN ADMIN -->
+        <div id="adminLoginBox">
+            <div class="form-header">
+                <h2>Login Administrator</h2>
+                <p class="subtitle">Silakan masuk untuk melihat data mahasiswa</p>
+            </div>
+
+            <div id="adminToast" class="toast hidden"></div>
+
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label for="adminUsername">Username Admin</label>
+                    <input type="text" id="adminUsername" placeholder="Masukkan username admin..." required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="adminPassword">Password Admin</label>
+                    <div class="password-container">
+                        <input type="password" id="adminPassword" placeholder="Masukkan password admin..." required>
+                        <button type="button" id="toggleAdminPassword">Lihat</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Masuk Panel Admin</button>
+            </form>
+        </div>
+
+        <!-- TAMPILAN DASHBOARD DATA ADMIN -->
+        <div id="adminDashboard" class="hidden">
+            <div class="form-header header-admin-dashboard">
+                <div>
+                    <h2>Data Mahasiswa Terdaftar</h2>
+                    <p class="subtitle">Total Data: <strong id="dataCount">0</strong> Mahasiswa</p>
+                </div>
+                <button type="button" id="logoutBtn" class="danger-btn">Logout Admin</button>
+            </div>
+
+            <div class="table-toolbar">
+                <input type="text" id="searchInput" placeholder="Cari berdasarkan NIM atau Prodi..." class="search-input">
+                <button type="button" id="clearAllBtn" class="danger-btn">Hapus Semua Data</button>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>NIM</th>
+                            <th>Program Studi</th>
+                            <th>Jenis Kelamin</th>
+                            <th>Waktu Input</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="6" class="text-center">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <p>&copy; 2026 Panel Administrator Sistem Pendataan</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const ADMIN_USER = "fr4myl";
+            const ADMIN_PASS = "framy140906";
+
+            // Logika Toggle Password Login Admin
+            const adminPasswordInput = document.getElementById("adminPassword");
+            const toggleAdminPassword = document.getElementById("toggleAdminPassword");
+
+            if (adminPasswordInput && toggleAdminPassword) {
+                toggleAdminPassword.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    if (adminPasswordInput.type === "password") {
+                        adminPasswordInput.type = "text";
+                        toggleAdminPassword.textContent = "Sembunyikan";
+                    } else {
+                        adminPasswordInput.type = "password";
+                        toggleAdminPassword.textContent = "Lihat";
+                    }
+                });
+            }
+
+            const adminLoginBox = document.getElementById("adminLoginBox");
+            const adminDashboard = document.getElementById("adminDashboard");
+            const adminLoginForm = document.getElementById("adminLoginForm");
+            const adminToast = document.getElementById("adminToast");
+            const logoutBtn = document.getElementById("logoutBtn");
+            const tableBody = document.getElementById("tableBody");
+            const searchInput = document.getElementById("searchInput");
+            const clearAllBtn = document.getElementById("clearAllBtn");
+
+            function getStoredData() {
+                return JSON.parse(localStorage.getItem("mahasiswaData")) || [];
+            }
+
+            function updateDataCount() {
+                const countEl = document.getElementById("dataCount");
+                if (countEl) countEl.textContent = getStoredData().length;
+            }
+
+            function showAdminToast(msg, type) {
+                if (!adminToast) return;
+                adminToast.textContent = msg;
+                adminToast.className = `toast ${type}`;
+                setTimeout(() => { adminToast.className = "toast hidden"; }, 3000);
+            }
+
+            function checkAdminSession() {
+                if (!adminLoginBox || !adminDashboard) return;
+                const isLoggedIn = sessionStorage.getItem("isAdminLoggedIn");
+                if (isLoggedIn === "true") {
+                    adminLoginBox.classList.add("hidden");
+                    adminDashboard.classList.remove("hidden");
+                    renderTable();
+                    updateDataCount();
+                } else {
+                    adminLoginBox.classList.remove("hidden");
+                    adminDashboard.classList.add("hidden");
+                }
+            }
+
+            if (adminLoginForm) {
+                adminLoginForm.addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    const userInput = document.getElementById("adminUsername").value.trim();
+                    const passInput = adminPasswordInput.value;
+
+                    if (userInput === ADMIN_USER && passInput === ADMIN_PASS) {
+                        sessionStorage.setItem("isAdminLoggedIn", "true");
+                        checkAdminSession();
+                        adminLoginForm.reset();
+                    } else {
+                        showAdminToast("Username atau Password Admin salah!", "error");
+                    }
+                });
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener("click", function () {
+                    sessionStorage.removeItem("isAdminLoggedIn");
+                    checkAdminSession();
+                });
+            }
+
+            function renderTable(filterKeyword = "") {
+                if (!tableBody) return;
+                const data = getStoredData();
+                const filtered = data.filter(item => 
+                    item.nim.toLowerCase().includes(filterKeyword.toLowerCase()) ||
+                    item.prodi.toLowerCase().includes(filterKeyword.toLowerCase())
+                );
+
+                if (filtered.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center">Data tidak ditemukan.</td></tr>`;
+                    return;
+                }
+
+                let rows = "";
+                filtered.forEach((item, index) => {
+                    rows += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${item.nim}</td>
+                            <td>${item.prodi}</td>
+                            <td>${item.gender}</td>
+                            <td>${item.timestamp}</td>
+                            <td>
+                                <button type="button" class="delete-item-btn" onclick="deleteMahasiswa(${item.id})">Hapus</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tableBody.innerHTML = rows;
+            }
+
+            if (tableBody) {
+                checkAdminSession();
+                if (searchInput) {
+                    searchInput.addEventListener("input", function () {
+                        renderTable(searchInput.value);
+                    });
+                }
+                if (clearAllBtn) {
+                    clearAllBtn.addEventListener("click", function () {
+                        if (confirm("Apakah Anda yakin ingin menghapus SEMUA data mahasiswa?")) {
+                            localStorage.removeItem("mahasiswaData");
+                            renderTable();
+                            updateDataCount();
+                        }
+                    });
+                }
+            }
+
+            window.deleteMahasiswa = function (id) {
+                if (confirm("Hapus data mahasiswa ini?")) {
+                    let data = getStoredData();
+                    data = data.filter(item => item.id !== id);
+                    localStorage.setItem("mahasiswaData", JSON.stringify(data));
+                    renderTable(searchInput ? searchInput.value : "");
+                    updateDataCount();
+                }
+            };
+        });
+    </script>
+</body>
+</html>
